@@ -1,3 +1,4 @@
+import type { QuestionType } from "@/api/types"
 import { useOnboarding } from "@/contexts/OnboardingContext"
 import { computeProgress } from "@/lib/progress"
 import { shouldDisplay } from "@/lib/visibility"
@@ -7,6 +8,36 @@ import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { expandCollapse, staggerContainer, fadeInUp } from "@/styles/animations"
 import { cn } from "@/lib/utils"
+
+function formatAnswer(answer: unknown, questionType: QuestionType): string {
+  if (answer === null || answer === undefined) return "—"
+  if (typeof answer === "boolean") return answer ? "Yes" : "No"
+  if (typeof answer === "string") return answer
+  if (typeof answer === "number") return String(answer)
+
+  if (Array.isArray(answer)) {
+    if (answer.length === 0) return "—"
+    // email_list or multi_select: array of strings
+    if (typeof answer[0] === "string") return (answer as string[]).join(", ")
+    // lane_builder: array of objects — show count
+    if (questionType === "lane_builder") return `${answer.length} lane${answer.length !== 1 ? "s" : ""} configured`
+    // key_value: array of {key, value}
+    if (questionType === "key_value") return `${answer.length} header${answer.length !== 1 ? "s" : ""} set`
+    return `${answer.length} item${answer.length !== 1 ? "s" : ""}`
+  }
+
+  if (typeof answer === "object") {
+    // address_form or object: show filled field count
+    const obj = answer as Record<string, unknown>
+    const filledCount = Object.values(obj).filter((v) => v !== null && v !== undefined && v !== "").length
+    const totalCount = Object.keys(obj).length
+    if (questionType === "address_form") return `${filledCount} of ${totalCount} fields filled`
+    if (questionType === "object") return `${filledCount} of ${totalCount} fields configured`
+    return JSON.stringify(answer)
+  }
+
+  return String(answer)
+}
 
 export function ReviewSummary() {
   const { sections, answers } = useOnboarding()
@@ -65,6 +96,8 @@ export function ReviewSummary() {
                               if (!shouldDisplay(q.depends_on, answers)) return null
                               const answer = answers[q.key]
                               const hasAnswer = answer !== undefined && answer !== null && answer !== ""
+                                && !(Array.isArray(answer) && answer.length === 0)
+                                && !(typeof answer === "object" && !Array.isArray(answer) && Object.keys(answer as object).length === 0)
                               return (
                                 <div key={q.key} className="flex justify-between items-start gap-4 text-sm">
                                   <span className="text-muted-foreground flex-1">
@@ -75,9 +108,7 @@ export function ReviewSummary() {
                                   </span>
                                   <span className={cn("text-right max-w-[50%] break-words", hasAnswer ? "text-foreground font-medium" : "text-muted-foreground/50")}>
                                     {hasAnswer
-                                      ? Array.isArray(answer)
-                                        ? (answer as string[]).join(", ")
-                                        : String(answer)
+                                      ? formatAnswer(answer, q.question_type)
                                       : "—"}
                                   </span>
                                 </div>

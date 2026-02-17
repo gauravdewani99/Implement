@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings
 
 # Look for .env in the project root (one level above backend/)
@@ -17,6 +18,16 @@ class Settings(BaseSettings):
     backend_port: int = 8000
 
     model_config = {"env_file": str(_env_file), "extra": "ignore"}
+
+    @model_validator(mode="after")
+    def normalize_database_url(self) -> "Settings":
+        """Convert postgres:// or postgresql:// to postgresql+asyncpg://."""
+        url = self.database_url
+        if url.startswith("postgres://"):
+            self.database_url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+        elif url.startswith("postgresql://") and "+asyncpg" not in url:
+            self.database_url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return self
 
 
 settings = Settings()

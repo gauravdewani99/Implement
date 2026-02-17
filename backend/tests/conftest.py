@@ -3,18 +3,22 @@ import pytest
 
 @pytest.fixture
 def sample_answers():
-    """Sample answers for testing progress computation."""
+    """Sample answers for testing progress computation using real question keys."""
     return {
-        "ri_portal_type": "ReBound Portal",
-        "ri_portal_languages": ["English", "German"],
-        "ri_auth_method": "Order number + email",
-        "ri_return_reason_required": "Yes - mandatory",
-        "ri_return_reasons": "Too small\nDefective",
-        "ri_photo_upload": "No",
-        "ri_item_selection": "Yes - item-level selection",
-        "ri_return_window": 30,
-        "ri_extended_return": "No",
-        "ri_non_returnable": ["Underwear"],
-        "ri_refund_method": ["Original payment method"],
-        "ri_rma_required": "No - auto-approve",
+        # General
+        "gen_client_name": "Test Brand Inc.",
+        "gen_operating_countries": ["United Kingdom", "Germany", "France"],
+        # Return Initiation — setup
+        "ri_frontend": "ReBound Consumer Portal",
+        "ri_api_integration": "REST API",
+        "ri_customs_lanes": True,
+        "ri_rgr_in_scope": False,
+        "ri_refund_trigger": True,
+        "ri_refund_level": "Item level",
+        # Return Initiation — consumer_portal
+        "ri_portal_journey": "Full journey (register → label → drop-off)",
+        "ri_return_payer": "Brand",
+        # Return Initiation — cs_portal
+        "ri_cs_portal_enabled": True,
+        "ri_cs_portal_features": ["Register returns", "View return status"],
     }

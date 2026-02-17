@@ -67,6 +67,11 @@ export type QuestionType =
   | "number"
   | "date"
   | "email"
+  | "lane_builder"
+  | "key_value"
+  | "object"
+  | "email_list"
+  | "address_form"
 
 export interface QuestionDefinition {
   key: string
@@ -82,6 +87,9 @@ export interface QuestionDefinition {
   default_value: unknown
   order: number
   config_description: string | null
+  service_url: string | null
+  target_service: string | null
+  field_config: Record<string, unknown> | null
 }
 
 export interface SubsectionOut {

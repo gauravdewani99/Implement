@@ -7,12 +7,45 @@ def should_display(depends_on: dict | None, answers: dict[str, Any]) -> bool:
         return True
     for key, expected in depends_on.items():
         actual = answers.get(key)
+        # Support $not_empty operator for complex types (lane_builder, object, etc.)
+        if isinstance(expected, dict) and "$not_empty" in expected:
+            if isinstance(actual, list):
+                if len(actual) == 0:
+                    return False
+            elif isinstance(actual, dict):
+                if not any(v for v in actual.values()):
+                    return False
+            elif actual is None or actual == "" or actual == []:
+                return False
+            continue
         if isinstance(expected, list):
             if actual not in expected:
                 return False
         else:
             if actual != expected:
                 return False
+    return True
+
+
+def _is_answered(answer: Any) -> bool:
+    """Check if an answer is considered 'filled in' for progress tracking.
+
+    Handles complex types: lists of objects (lane_builder), dicts (object/address_form),
+    lists of strings (email_list, multi_select), and primitives.
+    """
+    if answer is None:
+        return False
+    if isinstance(answer, str):
+        return answer != ""
+    if isinstance(answer, list):
+        return len(answer) > 0
+    if isinstance(answer, dict):
+        # For object/address_form: at least one non-empty value
+        return any(
+            v is not None and v != "" and v != []
+            for v in answer.values()
+        )
+    # bool, int, float — always considered answered
     return True
 
 
@@ -51,7 +84,7 @@ def compute_progress(
 
                 sub_total += 1
                 answer = answers.get(q["key"])
-                if answer is not None and answer != "" and answer != []:
+                if _is_answered(answer):
                     sub_answered += 1
 
             subsections_progress[sub_key] = {

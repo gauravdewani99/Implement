@@ -32,6 +32,24 @@ class TestShouldDisplay:
         assert should_display(deps, {"a": "1", "b": "2"}) is True
         assert should_display(deps, {"a": "1", "b": "3"}) is False
 
+    def test_not_empty_with_list(self):
+        deps = {"lanes": {"$not_empty": True}}
+        assert should_display(deps, {"lanes": [{"country": "UK"}]}) is True
+        assert should_display(deps, {"lanes": []}) is False
+        assert should_display(deps, {}) is False
+
+    def test_not_empty_with_dict(self):
+        deps = {"config": {"$not_empty": True}}
+        assert should_display(deps, {"config": {"host": "sftp.example.com"}}) is True
+        assert should_display(deps, {"config": {}}) is False  # empty dict has no truthy values
+        assert should_display(deps, {}) is False
+
+    def test_not_empty_with_string(self):
+        deps = {"name": {"$not_empty": True}}
+        assert should_display(deps, {"name": "John"}) is True
+        assert should_display(deps, {"name": ""}) is False
+        assert should_display(deps, {"name": None}) is False
+
 
 class TestComputeProgress:
     def test_empty_answers(self):
@@ -43,6 +61,10 @@ class TestComputeProgress:
     def test_partial_answers(self, sample_answers):
         sections = get_all_sections_dict()
         result = compute_progress(sections, sample_answers)
+        # Should have some progress in general (both required questions answered)
+        gen_progress = result["sections"]["general"]
+        assert gen_progress["answered"] > 0
+        assert gen_progress["percentage"] > 0
         # Should have some progress in return_initiation
         ri_progress = result["sections"]["return_initiation"]
         assert ri_progress["answered"] > 0
@@ -50,12 +72,12 @@ class TestComputeProgress:
 
     def test_hidden_questions_excluded(self):
         sections = get_all_sections_dict()
-        # With no processing level selected, L2/L3 questions should not count
-        answers = {"pr_product_types": ["Footwear"], "pr_processing_level": "Level 1 (Parcel level)"}
+        # With customs_lanes=False, customs-dependent questions should not count
+        answers = {"ri_customs_lanes": False, "ri_frontend": "ReBound Consumer Portal"}
         result = compute_progress(sections, answers)
-        processing = result["sections"]["processing"]
-        # Total should not include L2/L3 questions since they depend on higher processing level
-        assert processing["total"] > 0
+        last_mile = result["sections"]["last_mile"]
+        # Total should not include customs questions since they depend on ri_customs_lanes=True
+        assert last_mile["total"] > 0
 
     def test_overall_aggregation(self, sample_answers):
         sections = get_all_sections_dict()

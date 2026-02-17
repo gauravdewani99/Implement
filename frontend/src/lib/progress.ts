@@ -7,6 +7,25 @@ interface ProgressResult {
   subsections: Record<string, ProgressDetail>
 }
 
+/**
+ * Check if an answer is considered "answered" for progress tracking.
+ * Handles complex types: arrays of objects (lane_builder), objects (address_form, SFTP),
+ * arrays of strings (email_list), key-value pairs, etc.
+ */
+function isAnswered(answer: unknown): boolean {
+  if (answer === undefined || answer === null) return false
+  if (typeof answer === "string") return answer !== ""
+  if (typeof answer === "number") return true
+  if (typeof answer === "boolean") return true
+  if (Array.isArray(answer)) return answer.length > 0
+  if (typeof answer === "object") {
+    return Object.values(answer as Record<string, unknown>).some(
+      (v) => v !== null && v !== undefined && v !== "" && !(Array.isArray(v) && v.length === 0),
+    )
+  }
+  return true
+}
+
 export function computeProgress(
   sections: SectionOut[],
   answers: Record<string, unknown>,
@@ -30,8 +49,7 @@ export function computeProgress(
         if (!shouldDisplay(q.depends_on, answers)) continue
 
         subTotal++
-        const answer = answers[q.key]
-        if (answer !== undefined && answer !== null && answer !== "" && !(Array.isArray(answer) && answer.length === 0)) {
+        if (isAnswered(answers[q.key])) {
           subAnswered++
         }
       }

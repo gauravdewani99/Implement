@@ -2,6 +2,11 @@ import type { QuestionDefinition } from "@/api/types"
 import { useOnboarding } from "@/contexts/OnboardingContext"
 import { HelpCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { LaneBuilderInput } from "./LaneBuilderInput"
+import { KeyValueInput } from "./KeyValueInput"
+import { ObjectInput } from "./ObjectInput"
+import { EmailListInput } from "./EmailListInput"
+import { AddressFormInput } from "./AddressFormInput"
 
 export function QuestionRenderer({ question }: { question: QuestionDefinition }) {
   const { answers, updateAnswer } = useOnboarding()
@@ -141,6 +146,46 @@ export function QuestionRenderer({ question }: { question: QuestionDefinition })
           value={(value as string) ?? ""}
           onChange={(e) => handleChange(e.target.value)}
           className={inputClass}
+        />
+      )}
+
+      {question.question_type === "lane_builder" && (
+        <LaneBuilderInput
+          question={question}
+          value={(value as Record<string, string>[]) ?? []}
+          onChange={handleChange}
+        />
+      )}
+
+      {question.question_type === "key_value" && (
+        <KeyValueInput
+          question={question}
+          value={(value as { key: string; value: string }[]) ?? []}
+          onChange={handleChange}
+        />
+      )}
+
+      {question.question_type === "object" && (
+        <ObjectInput
+          question={question}
+          value={(value as Record<string, unknown>) ?? {}}
+          onChange={handleChange}
+        />
+      )}
+
+      {question.question_type === "email_list" && (
+        <EmailListInput
+          value={(value as string[]) ?? []}
+          onChange={handleChange}
+          placeholder={question.placeholder}
+        />
+      )}
+
+      {question.question_type === "address_form" && (
+        <AddressFormInput
+          question={question}
+          value={(value as Record<string, string>) ?? {}}
+          onChange={handleChange}
         />
       )}
     </div>

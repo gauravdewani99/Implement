@@ -7,12 +7,13 @@ import { motion, AnimatePresence } from "framer-motion"
 import { expandCollapse } from "@/styles/animations"
 
 const SECTION_ICONS: Record<string, string> = {
-  return_initiation: "1",
-  first_mile: "2",
-  processing: "3",
-  last_mile: "4",
-  notifications_messaging: "5",
-  data_insights: "6",
+  general: "1",
+  return_initiation: "2",
+  first_mile: "3",
+  processing: "4",
+  last_mile: "5",
+  notifications_tracking: "6",
+  data_insights: "7",
 }
 
 export function SectionStepper() {

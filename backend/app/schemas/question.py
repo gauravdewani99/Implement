@@ -17,6 +17,9 @@ class QuestionOut(BaseModel):
     default_value: Any = None
     order: int = 0
     config_description: str | None = None
+    service_url: str | None = None
+    target_service: str | None = None
+    field_config: dict[str, Any] | None = None
 
 
 class SubsectionOut(BaseModel):

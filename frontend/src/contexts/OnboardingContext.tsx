@@ -17,7 +17,7 @@ const OnboardingContext = createContext<OnboardingContextType | null>(null)
 
 export function OnboardingProvider({ children }: { children: ReactNode }) {
   const [sections, setSections] = useState<SectionOut[]>([])
-  const [activeSection, setActiveSection] = useState("return_initiation")
+  const [activeSection, setActiveSection] = useState("general")
   const [answers, setAnswers] = useState<Record<string, unknown>>({})
   const [dirtyKeys, setDirtyKeys] = useState<Set<string>>(new Set())
 
