@@ -7,7 +7,7 @@ from app.config import settings
 
 def _build_connect_args() -> dict:
     """Build asyncpg connection arguments with conditional SSL for Railway."""
-    args: dict = {"command_timeout": 10}
+    args: dict = {"command_timeout": 30}
     # Railway's Postgres proxy (*.rlwy.net) requires SSL
     if "rlwy.net" in settings.database_url:
         ctx = _ssl.create_default_context()

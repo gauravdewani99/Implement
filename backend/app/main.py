@@ -22,18 +22,24 @@ app = FastAPI(
 
 @app.on_event("startup")
 async def startup_create_tables():
-    """Create database tables. Awaited so tables exist before requests arrive."""
-    try:
-        from app.database import engine
-        from app.models import Base
+    """Create database tables with retry. Non-fatal so healthcheck always passes."""
+    import asyncio
 
-        logger.info("Creating database tables...")
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-        logger.info("Database tables created successfully.")
-    except Exception as e:
-        logger.error(f"Failed to create database tables: {e}")
-        raise  # Let the process crash so Railway restarts it
+    from app.database import engine
+    from app.models import Base
+
+    for attempt in range(1, 4):
+        try:
+            logger.info(f"Creating database tables (attempt {attempt}/3)...")
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+            logger.info("Database tables created successfully.")
+            return
+        except Exception as e:
+            logger.error(f"Attempt {attempt} failed: {e}")
+            if attempt < 3:
+                await asyncio.sleep(2 ** attempt)
+    logger.error("All 3 attempts to create tables failed. App will start but DB endpoints will fail.")
 
 
 @app.exception_handler(Exception)
