@@ -1,5 +1,0 @@
-# Nixpacks build configuration for Railway
-# Provides system libraries needed by Python native extensions
-
-[phases.setup]
-nixPkgs = ["postgresql"]
