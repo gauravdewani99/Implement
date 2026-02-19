@@ -1,22 +1,33 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useNavigate } from "react-router-dom"
 import { clientsApi } from "@/api/endpoints/clients"
 import { progressApi } from "@/api/endpoints/progress"
 import type { ClientResponse } from "@/api/types"
 import { AppLayout } from "@/components/layout/AppLayout"
-import { ClientCard } from "@/components/clients/ClientCard"
 import { CreateClientDialog } from "@/components/clients/CreateClientDialog"
 import { EmptyState } from "@/components/common/EmptyState"
-import { Plus } from "lucide-react"
-import { SkeletonCard } from "@/components/common/SkeletonCard"
+import { ProgressBar } from "@/components/onboarding/ProgressBar"
+import { Plus, ArrowUpDown, ArrowRight } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { motion } from "framer-motion"
-import { staggerContainer, fadeInUp } from "@/styles/animations"
+import { fadeInUp } from "@/styles/animations"
+
+const STATUS_LABELS: Record<string, { label: string; className: string }> = {
+  draft: { label: "Draft", className: "bg-status-draft text-status-draft-foreground" },
+  in_progress: { label: "In Progress", className: "bg-status-in-progress text-status-in-progress-foreground" },
+  completed: { label: "Completed", className: "bg-status-completed text-status-completed-foreground" },
+}
+
+type SortField = "name" | "updated_at"
+type SortDir = "asc" | "desc"
 
 export function DashboardPage() {
   const [clients, setClients] = useState<ClientResponse[]>([])
   const [progressMap, setProgressMap] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [sortField, setSortField] = useState<SortField>("updated_at")
+  const [sortDir, setSortDir] = useState<SortDir>("desc")
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -50,12 +61,35 @@ export function DashboardPage() {
     navigate(`/clients/${client.id}`)
   }
 
+  function toggleSort(field: SortField) {
+    if (sortField === field) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"))
+    } else {
+      setSortField(field)
+      setSortDir(field === "name" ? "asc" : "desc")
+    }
+  }
+
+  const sortedClients = useMemo(() => {
+    return [...clients].sort((a, b) => {
+      let cmp = 0
+      if (sortField === "name") {
+        cmp = a.name.localeCompare(b.name)
+      } else {
+        cmp = new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime()
+      }
+      return sortDir === "asc" ? cmp : -cmp
+    })
+  }, [clients, sortField, sortDir])
+
   if (loading) {
     return (
       <AppLayout>
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1, 2, 3].map((i) => <SkeletonCard key={i} />)}
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+          <div className="space-y-3">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-14 rounded-lg bg-muted animate-pulse" />
+            ))}
           </div>
         </div>
       </AppLayout>
@@ -64,7 +98,7 @@ export function DashboardPage() {
 
   return (
     <AppLayout>
-      <motion.div {...fadeInUp} className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+      <motion.div {...fadeInUp} className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-xl font-semibold text-foreground">Clients</h1>
@@ -94,16 +128,78 @@ export function DashboardPage() {
             }
           />
         ) : (
-          <motion.div initial="initial" animate="animate" variants={staggerContainer} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {clients.map((client) => (
-              <ClientCard
-                key={client.id}
-                client={client}
-                progress={progressMap[client.id]}
-                onClick={() => navigate(`/clients/${client.id}`)}
-              />
-            ))}
-          </motion.div>
+          <div className="border border-border rounded-xl overflow-hidden bg-card shadow-sm">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border bg-muted/30">
+                  <th className="text-left px-4 py-3">
+                    <button
+                      onClick={() => toggleSort("name")}
+                      className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
+                    >
+                      Client Name
+                      <ArrowUpDown className={cn("w-3 h-3", sortField === "name" && "text-foreground")} />
+                    </button>
+                  </th>
+                  <th className="text-left px-4 py-3">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</span>
+                  </th>
+                  <th className="text-left px-4 py-3 hidden sm:table-cell">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Progress</span>
+                  </th>
+                  <th className="text-left px-4 py-3 hidden md:table-cell">
+                    <button
+                      onClick={() => toggleSort("updated_at")}
+                      className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
+                    >
+                      Last Updated
+                      <ArrowUpDown className={cn("w-3 h-3", sortField === "updated_at" && "text-foreground")} />
+                    </button>
+                  </th>
+                  <th className="w-10" />
+                </tr>
+              </thead>
+              <tbody>
+                {sortedClients.map((client) => {
+                  const status = STATUS_LABELS[client.status] ?? STATUS_LABELS.draft
+                  const progress = progressMap[client.id] ?? 0
+                  return (
+                    <tr
+                      key={client.id}
+                      onClick={() => navigate(`/clients/${client.id}`)}
+                      className="border-b border-border last:border-b-0 hover:bg-muted/30 cursor-pointer transition-colors group"
+                    >
+                      <td className="px-4 py-3">
+                        <span className="text-sm font-medium text-foreground">{client.name}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={cn("text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap", status.className)}>
+                          {status.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 hidden sm:table-cell">
+                        <div className="w-32">
+                          <ProgressBar percentage={progress} size="sm" />
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 hidden md:table-cell">
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(client.updated_at).toLocaleDateString("en-GB", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </motion.div>
 

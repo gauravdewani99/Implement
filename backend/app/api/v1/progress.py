@@ -21,7 +21,7 @@ async def get_progress(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    client = await get_client(db, client_id, current_user.id)
+    client = await get_client(db, client_id)
     if client is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Client not found")
 

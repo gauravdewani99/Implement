@@ -16,9 +16,7 @@ export function Header({ onToggleSidebar }: { onToggleSidebar?: () => void }) {
             <Menu className="w-5 h-5 text-foreground" />
           </button>
         )}
-        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
-          <span className="text-primary-foreground font-semibold text-sm">R</span>
-        </div>
+        <img src="/rebound-logo.png" alt="ReBound" className="h-8 w-auto" />
         <span className="font-semibold text-foreground tracking-tight">Implement</span>
       </div>
       {user && (

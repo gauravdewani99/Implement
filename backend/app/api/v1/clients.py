@@ -17,7 +17,7 @@ async def list_clients(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    clients = await get_clients(db, current_user.id)
+    clients = await get_clients(db)
     return [
         ClientResponse(
             id=str(c.id),
@@ -56,7 +56,7 @@ async def get_one(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    client = await get_client(db, client_id, current_user.id)
+    client = await get_client(db, client_id)
     if client is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Client not found")
     return ClientResponse(
@@ -77,7 +77,7 @@ async def update(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    client = await get_client(db, client_id, current_user.id)
+    client = await get_client(db, client_id)
     if client is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Client not found")
 
@@ -105,7 +105,7 @@ async def delete(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    client = await get_client(db, client_id, current_user.id)
+    client = await get_client(db, client_id)
     if client is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Client not found")
     await delete_client(db, client)

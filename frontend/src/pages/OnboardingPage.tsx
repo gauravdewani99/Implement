@@ -1,12 +1,13 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo, useCallback } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { clientsApi } from "@/api/endpoints/clients"
 import { responsesApi } from "@/api/endpoints/responses"
 import { questionsApi } from "@/api/endpoints/questions"
 import type { ClientResponse } from "@/api/types"
 import { AppLayout } from "@/components/layout/AppLayout"
-import { SectionStepper } from "@/components/onboarding/SectionStepper"
-import { SectionPage } from "@/components/onboarding/SectionPage"
+import { HorizontalStepper } from "@/components/onboarding/HorizontalStepper"
+import { SubsectionStepper } from "@/components/onboarding/SubsectionStepper"
+import { QuestionGroup } from "@/components/onboarding/QuestionGroup"
 import { ReviewSummary } from "@/components/onboarding/ReviewSummary"
 import { SaveIndicator } from "@/components/common/SaveIndicator"
 import { useOnboarding, OnboardingProvider } from "@/contexts/OnboardingContext"
@@ -22,7 +23,15 @@ function OnboardingContent() {
   const [client, setClient] = useState<ClientResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [showReview, setShowReview] = useState(false)
-  const { sections, setSections, activeSection, setActiveSection, setAnswers } = useOnboarding()
+  const {
+    sections,
+    setSections,
+    activeSection,
+    setActiveSection,
+    activeSubsection,
+    setActiveSubsection,
+    setAnswers,
+  } = useOnboarding()
   const { saveStatus, flush } = useAutoSave(clientId)
 
   useEffect(() => {
@@ -40,6 +49,13 @@ function OnboardingContent() {
       setClient(clientData)
       setSections(sectionData)
       setActiveSection(clientData.current_section)
+
+      // Set initial subsection to the first subsection of the active section
+      const section = sectionData.find((s) => s.key === clientData.current_section)
+      if (section && section.subsections.length > 0) {
+        setActiveSubsection(section.subsections[0].key)
+      }
+
       const answersMap: Record<string, unknown> = {}
       for (const r of responsesData) {
         answersMap[r.question_key] = r.answer
@@ -52,24 +68,94 @@ function OnboardingContent() {
     }
   }
 
-  const currentSectionData = sections.find((s) => s.key === activeSection)
-  const currentIdx = sections.findIndex((s) => s.key === activeSection)
-
-  const goToSection = async (key: string) => {
-    await flush()
-    setActiveSection(key)
-    setShowReview(false)
-    if (clientId) {
-      clientsApi.update(clientId, { current_section: key }).catch(() => {})
+  // Build a flat list of all (sectionKey, subsectionKey) pairs for wizard navigation
+  const flatSteps = useMemo(() => {
+    const steps: { sectionKey: string; subsectionKey: string }[] = []
+    for (const sec of sections) {
+      for (const sub of sec.subsections) {
+        steps.push({ sectionKey: sec.key, subsectionKey: sub.key })
+      }
     }
-  }
+    return steps
+  }, [sections])
+
+  const currentFlatIdx = useMemo(() => {
+    return flatSteps.findIndex(
+      (s) => s.sectionKey === activeSection && s.subsectionKey === activeSubsection,
+    )
+  }, [flatSteps, activeSection, activeSubsection])
+
+  const currentSectionData = sections.find((s) => s.key === activeSection)
+  const currentSubsectionData = currentSectionData?.subsections.find(
+    (sub) => sub.key === activeSubsection,
+  )
+
+  const goToSection = useCallback(
+    async (sectionKey: string) => {
+      await flush()
+      setActiveSection(sectionKey)
+      const section = sections.find((s) => s.key === sectionKey)
+      if (section && section.subsections.length > 0) {
+        setActiveSubsection(section.subsections[0].key)
+      }
+      setShowReview(false)
+      if (clientId) {
+        clientsApi.update(clientId, { current_section: sectionKey }).catch(() => {})
+      }
+    },
+    [flush, sections, clientId, setActiveSection, setActiveSubsection],
+  )
+
+  const goToSubsection = useCallback(
+    async (subsectionKey: string) => {
+      await flush()
+      setActiveSubsection(subsectionKey)
+      setShowReview(false)
+    },
+    [flush, setActiveSubsection],
+  )
+
+  const goNext = useCallback(async () => {
+    await flush()
+    if (currentFlatIdx < flatSteps.length - 1) {
+      const next = flatSteps[currentFlatIdx + 1]
+      if (next.sectionKey !== activeSection) {
+        setActiveSection(next.sectionKey)
+        if (clientId) {
+          clientsApi.update(clientId, { current_section: next.sectionKey }).catch(() => {})
+        }
+      }
+      setActiveSubsection(next.subsectionKey)
+      setShowReview(false)
+    } else {
+      // Last subsection of last section → show review
+      setShowReview(true)
+    }
+  }, [flush, currentFlatIdx, flatSteps, activeSection, clientId, setActiveSection, setActiveSubsection])
+
+  const goPrev = useCallback(async () => {
+    await flush()
+    if (showReview) {
+      setShowReview(false)
+      return
+    }
+    if (currentFlatIdx > 0) {
+      const prev = flatSteps[currentFlatIdx - 1]
+      if (prev.sectionKey !== activeSection) {
+        setActiveSection(prev.sectionKey)
+        if (clientId) {
+          clientsApi.update(clientId, { current_section: prev.sectionKey }).catch(() => {})
+        }
+      }
+      setActiveSubsection(prev.subsectionKey)
+    }
+  }, [flush, showReview, currentFlatIdx, flatSteps, activeSection, clientId, setActiveSection, setActiveSubsection])
 
   const handleComplete = async () => {
     await flush()
     if (clientId) {
       await clientsApi.update(clientId, { status: "completed" })
       toast.success("Configuration marked as complete!")
-      // Fire placeholder toasts for each config_description
       for (const section of sections) {
         for (const sub of section.subsections) {
           for (const q of sub.questions) {
@@ -92,81 +178,105 @@ function OnboardingContent() {
     )
   }
 
-  const sidebar = (
-    <div className="flex flex-col h-full">
-      <div className="p-4 border-b border-border">
-        <button
-          onClick={() => navigate("/")}
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-2"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          Back to Clients
-        </button>
-        <h2 className="text-sm font-semibold text-foreground truncate">{client.name}</h2>
-        <SaveIndicator status={saveStatus} />
-      </div>
-      <div className="flex-1 overflow-y-auto">
-        <SectionStepper />
-      </div>
-      <div className="p-4 border-t border-border">
-        <button
-          onClick={() => {
-            setShowReview(true)
-          }}
-          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-sm border border-input hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-[0.98]"
-        >
-          <ClipboardCheck className="w-4 h-4" />
-          Review
-        </button>
-      </div>
-    </div>
-  )
+  const isFirstStep = currentFlatIdx === 0 && !showReview
+  const isLastStep = currentFlatIdx === flatSteps.length - 1
 
   return (
-    <AppLayout sidebar={sidebar}>
+    <AppLayout>
       <Toaster position="top-right" />
-      {showReview ? (
-        <div>
-          <ReviewSummary />
-          <div className="max-w-2xl mx-auto px-4 sm:px-6 pb-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
+        {/* Top bar: Back + client name + save + review */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3 min-w-0">
             <button
-              onClick={handleComplete}
-              className="w-full py-2.5 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-[0.98]"
+              onClick={() => navigate("/")}
+              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-md px-1 py-0.5"
             >
-              Mark as Complete
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Clients</span>
             </button>
+            <div className="h-5 w-px bg-border shrink-0" />
+            <h2 className="text-sm font-semibold text-foreground truncate">{client.name}</h2>
+            <SaveIndicator status={saveStatus} />
           </div>
+          <button
+            onClick={() => setShowReview(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm border border-input hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-[0.98] shrink-0"
+          >
+            <ClipboardCheck className="w-4 h-4" />
+            <span className="hidden sm:inline">Review</span>
+          </button>
         </div>
-      ) : currentSectionData ? (
-        <div>
-          <AnimatePresence mode="wait">
-            <motion.div key={activeSection} {...fadeInUp}>
-              <SectionPage section={currentSectionData} />
-            </motion.div>
-          </AnimatePresence>
-          <div className="max-w-2xl mx-auto px-4 sm:px-6 pb-8 flex justify-between">
-            <button
-              onClick={() => currentIdx > 0 && goToSection(sections[currentIdx - 1].key)}
-              disabled={currentIdx === 0}
-              className="flex items-center gap-1 px-4 py-2 rounded-md text-sm border border-input hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-[0.98]"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Previous
-            </button>
-            <button
-              onClick={() =>
-                currentIdx < sections.length - 1
-                  ? goToSection(sections[currentIdx + 1].key)
-                  : setShowReview(true)
-              }
-              className="flex items-center gap-1 px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-[0.98]"
-            >
-              {currentIdx < sections.length - 1 ? "Next" : "Review"}
-              <ChevronRight className="w-4 h-4" />
-            </button>
+
+        {/* Horizontal section stepper */}
+        <div className="mb-6">
+          <HorizontalStepper onSectionClick={goToSection} />
+        </div>
+
+        {showReview ? (
+          <div>
+            <ReviewSummary />
+            <div className="mt-6 pb-8">
+              <button
+                onClick={handleComplete}
+                className="w-full py-2.5 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-[0.98]"
+              >
+                Mark as Complete
+              </button>
+            </div>
           </div>
-        </div>
-      ) : null}
+        ) : (
+          <div>
+            {/* Subsection stepper */}
+            <div className="mb-6">
+              <SubsectionStepper onSubsectionClick={goToSubsection} />
+            </div>
+
+            {/* Content: single subsection */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={`${activeSection}-${activeSubsection}`}
+                {...fadeInUp}
+                className="min-h-[300px]"
+              >
+                {currentSubsectionData && (
+                  <div className="max-w-2xl">
+                    {/* Section + Subsection title */}
+                    <div className="mb-6">
+                      <h2 className="text-lg font-semibold text-foreground">
+                        {currentSectionData?.title}
+                      </h2>
+                      <p className="text-sm text-muted-foreground mt-0.5">
+                        {currentSubsectionData.title}
+                      </p>
+                    </div>
+                    <QuestionGroup subsection={currentSubsectionData} />
+                  </div>
+                )}
+              </motion.div>
+            </AnimatePresence>
+
+            {/* Prev / Next navigation */}
+            <div className="flex justify-between items-center mt-8 pb-8 border-t border-border pt-6">
+              <button
+                onClick={goPrev}
+                disabled={isFirstStep}
+                className="flex items-center gap-1 px-4 py-2 rounded-md text-sm border border-input hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-[0.98]"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Previous
+              </button>
+              <button
+                onClick={goNext}
+                className="flex items-center gap-1 px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-[0.98]"
+              >
+                {isLastStep ? "Review" : "Next"}
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </AppLayout>
   )
 }

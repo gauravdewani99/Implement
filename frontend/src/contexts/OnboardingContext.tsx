@@ -6,6 +6,8 @@ interface OnboardingContextType {
   setSections: (s: SectionOut[]) => void
   activeSection: string
   setActiveSection: (s: string) => void
+  activeSubsection: string
+  setActiveSubsection: (s: string) => void
   answers: Record<string, unknown>
   setAnswers: (a: Record<string, unknown>) => void
   updateAnswer: (key: string, value: unknown) => void
@@ -18,6 +20,7 @@ const OnboardingContext = createContext<OnboardingContextType | null>(null)
 export function OnboardingProvider({ children }: { children: ReactNode }) {
   const [sections, setSections] = useState<SectionOut[]>([])
   const [activeSection, setActiveSection] = useState("general")
+  const [activeSubsection, setActiveSubsection] = useState("")
   const [answers, setAnswers] = useState<Record<string, unknown>>({})
   const [dirtyKeys, setDirtyKeys] = useState<Set<string>>(new Set())
 
@@ -37,6 +40,8 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         setSections,
         activeSection,
         setActiveSection,
+        activeSubsection,
+        setActiveSubsection,
         answers,
         setAnswers,
         updateAnswer,

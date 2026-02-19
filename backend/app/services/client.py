@@ -20,16 +20,16 @@ async def create_client(db: AsyncSession, user_id: uuid.UUID, name: str, metadat
     return client
 
 
-async def get_clients(db: AsyncSession, user_id: uuid.UUID) -> list[Client]:
+async def get_clients(db: AsyncSession) -> list[Client]:
     result = await db.execute(
-        select(Client).where(Client.user_id == user_id).order_by(Client.updated_at.desc())
+        select(Client).order_by(Client.updated_at.desc())
     )
     return list(result.scalars().all())
 
 
-async def get_client(db: AsyncSession, client_id: uuid.UUID, user_id: uuid.UUID) -> Client | None:
+async def get_client(db: AsyncSession, client_id: uuid.UUID) -> Client | None:
     result = await db.execute(
-        select(Client).where(Client.id == client_id, Client.user_id == user_id)
+        select(Client).where(Client.id == client_id)
     )
     return result.scalar_one_or_none()
 

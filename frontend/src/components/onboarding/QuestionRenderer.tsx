@@ -8,6 +8,13 @@ import { ObjectInput } from "./ObjectInput"
 import { EmailListInput } from "./EmailListInput"
 import { AddressFormInput } from "./AddressFormInput"
 
+const SERVICE_BORDER_COLORS: Record<string, string> = {
+  unicorn: "border-l-[3px] border-l-yellow-200 pl-3",
+  c3: "border-l-[3px] border-l-pink-200 pl-3",
+  "sca-process-models": "border-l-[3px] border-l-orange-200 pl-3",
+  pigeon: "border-l-[3px] border-l-amber-200 pl-3",
+}
+
 export function QuestionRenderer({ question }: { question: QuestionDefinition }) {
   const { answers, updateAnswer } = useOnboarding()
   const value = answers[question.key]
@@ -16,8 +23,12 @@ export function QuestionRenderer({ question }: { question: QuestionDefinition })
     updateAnswer(question.key, val)
   }
 
+  const borderClass = question.target_service
+    ? SERVICE_BORDER_COLORS[question.target_service] ?? ""
+    : ""
+
   return (
-    <div className="space-y-1.5">
+    <div className={cn("space-y-1.5", borderClass)}>
       <label className="flex items-start gap-1.5">
         <span className="text-sm font-medium text-foreground">
           {question.question_text}
