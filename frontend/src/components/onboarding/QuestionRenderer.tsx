@@ -28,7 +28,21 @@ export function QuestionRenderer({ question }: { question: QuestionDefinition })
     : ""
 
   return (
-    <div className={cn("space-y-1.5", borderClass)}>
+    <div className={cn(
+      "space-y-1.5",
+      borderClass,
+      question.config_description && "group/service relative",
+    )}>
+      {/* Service indicator tooltip — appears on hover over the bordered area */}
+      {question.config_description && (
+        <span
+          role="tooltip"
+          className="invisible group-hover/service:visible absolute bottom-full left-0 mb-1.5 z-50 rounded-md bg-popover border border-border px-2.5 py-1.5 text-xs text-popover-foreground shadow-md whitespace-nowrap pointer-events-none"
+        >
+          {question.config_description}
+        </span>
+      )}
+
       <label className="flex items-start gap-1.5">
         <span className="text-sm font-medium text-foreground">
           {question.question_text}
@@ -99,33 +113,84 @@ export function QuestionRenderer({ question }: { question: QuestionDefinition })
         </select>
       )}
 
-      {question.question_type === "multi_select" && (
-        <div className="flex flex-wrap gap-2">
-          {question.options.map((opt) => {
-            const selected = Array.isArray(value) && (value as string[]).includes(opt)
-            return (
-              <button
-                key={opt}
-                type="button"
-                onClick={() => {
-                  const current = Array.isArray(value) ? (value as string[]) : []
-                  handleChange(
-                    selected ? current.filter((v) => v !== opt) : [...current, opt],
-                  )
+      {/* Multi-select with inline "Other" free-text support */}
+      {question.question_type === "multi_select" && (() => {
+        const currentArr = Array.isArray(value) ? (value as string[]) : []
+        const hasOtherOption = question.options.includes("Other")
+        // Find any "Other" or "Other: ..." entry in the current answers
+        const otherEntry = hasOtherOption
+          ? currentArr.find((v) => v === "Other" || v.startsWith("Other: "))
+          : undefined
+        const otherSelected = !!otherEntry
+        const otherText = otherEntry?.startsWith("Other: ") ? otherEntry.slice(7) : ""
+
+        return (
+          <div className="flex flex-wrap gap-2">
+            {question.options.map((opt) => {
+              // Special handling for the "Other" option
+              if (opt === "Other" && hasOtherOption) {
+                return (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => {
+                      if (otherSelected) {
+                        handleChange(currentArr.filter((v) => v !== "Other" && !v.startsWith("Other: ")))
+                      } else {
+                        handleChange([...currentArr, "Other"])
+                      }
+                    }}
+                    className={cn(
+                      "px-3 py-1.5 rounded-md text-sm border transition-colors",
+                      otherSelected
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background text-foreground border-input hover:bg-muted",
+                    )}
+                  >
+                    Other
+                  </button>
+                )
+              }
+
+              const selected = currentArr.includes(opt)
+              return (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => {
+                    handleChange(
+                      selected ? currentArr.filter((v) => v !== opt) : [...currentArr, opt],
+                    )
+                  }}
+                  className={cn(
+                    "px-3 py-1.5 rounded-md text-sm border transition-colors",
+                    selected
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background text-foreground border-input hover:bg-muted",
+                  )}
+                >
+                  {opt}
+                </button>
+              )
+            })}
+            {/* Inline text input when "Other" is selected */}
+            {hasOtherOption && otherSelected && (
+              <input
+                type="text"
+                value={otherText}
+                onChange={(e) => {
+                  const newText = e.target.value
+                  const withoutOther = currentArr.filter((v) => v !== "Other" && !v.startsWith("Other: "))
+                  handleChange([...withoutOther, newText ? `Other: ${newText}` : "Other"])
                 }}
-                className={cn(
-                  "px-3 py-1.5 rounded-md text-sm border transition-colors",
-                  selected
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-background text-foreground border-input hover:bg-muted",
-                )}
-              >
-                {opt}
-              </button>
-            )
-          })}
-        </div>
-      )}
+                placeholder="Please specify..."
+                autoFocus
+                className="px-3 py-1.5 rounded-md text-sm border border-primary bg-background text-foreground min-w-[150px] max-w-[200px] focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 transition-colors"
+              />
+            )}
+          </div>
+        )
+      })()}
 
       {question.question_type === "boolean" && (
         <div className="flex gap-3">
