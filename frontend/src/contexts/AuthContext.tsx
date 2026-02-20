@@ -21,8 +21,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const token = localStorage.getItem("access_token")
     if (token) {
       setAccessToken(token)
-      authApi
-        .me()
+
+      // Race the token-check against a 5-second timeout so users don't
+      // stare at a blank screen if the backend is cold-starting.
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Token check timed out")), 5_000),
+      )
+
+      Promise.race([authApi.me(), timeout])
         .then(setUser)
         .catch(() => {
           localStorage.removeItem("access_token")
