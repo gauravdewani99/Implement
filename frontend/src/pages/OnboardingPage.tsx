@@ -5,7 +5,7 @@ import { responsesApi } from "@/api/endpoints/responses"
 import { questionsApi } from "@/api/endpoints/questions"
 import type { ClientResponse } from "@/api/types"
 import { AppLayout } from "@/components/layout/AppLayout"
-import { HorizontalStepper } from "@/components/onboarding/HorizontalStepper"
+import { SidebarStepper } from "@/components/onboarding/SidebarStepper"
 import { SubsectionStepper } from "@/components/onboarding/SubsectionStepper"
 import { QuestionGroup } from "@/components/onboarding/QuestionGroup"
 import { ReviewSummary } from "@/components/onboarding/ReviewSummary"
@@ -182,9 +182,16 @@ function OnboardingContent() {
   const isLastStep = currentFlatIdx === flatSteps.length - 1
 
   return (
-    <AppLayout>
+    <AppLayout
+      sidebar={
+        <SidebarStepper
+          onSectionClick={goToSection}
+          onSubsectionClick={goToSubsection}
+        />
+      }
+    >
       <Toaster position="top-right" />
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Top bar: Back + client name + save + review */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3 min-w-0">
@@ -208,11 +215,6 @@ function OnboardingContent() {
           </button>
         </div>
 
-        {/* Horizontal section stepper */}
-        <div className="mb-6">
-          <HorizontalStepper onSectionClick={goToSection} />
-        </div>
-
         {showReview ? (
           <div>
             <ReviewSummary />
@@ -227,7 +229,7 @@ function OnboardingContent() {
           </div>
         ) : (
           <div>
-            {/* Subsection stepper */}
+            {/* Subsection tabs */}
             <div className="mb-6">
               <SubsectionStepper onSubsectionClick={goToSubsection} />
             </div>

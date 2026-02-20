@@ -23,7 +23,14 @@
   --color-destructive-foreground: hsl(210 40% 98%);
   --color-border: hsl(214.3 31.8% 91.4%);
   --color-input: hsl(214.3 31.8% 91.4%);
-  --color-ring: hsl(222.2 84% 4.9%);
+  --color-ring: #3DBFA0;
+
+  /* ReBound Brand */
+  --color-brand-teal: #3DBFA0;
+  --color-brand-green: #6BC28F;
+  --color-brand-navy: #2D3E50;
+  --color-brand-navy-light: #3A5068;
+  --color-brand-navy-dark: #1E2D3D;
 
   /* Status colors */
   --color-status-draft: hsl(210 40% 96.1%);
@@ -33,15 +40,15 @@
   --color-status-completed: hsl(142 76% 94%);
   --color-status-completed-foreground: hsl(142 76% 32%);
 
-  /* Sidebar */
-  --color-sidebar-background: hsl(0 0% 98%);
-  --color-sidebar-foreground: hsl(240 5.3% 26.1%);
-  --color-sidebar-primary: hsl(240 5.9% 10%);
-  --color-sidebar-primary-foreground: hsl(0 0% 98%);
-  --color-sidebar-accent: hsl(240 4.8% 95.9%);
-  --color-sidebar-accent-foreground: hsl(240 5.9% 10%);
-  --color-sidebar-border: hsl(220 13% 91%);
-  --color-sidebar-ring: hsl(217.2 91.2% 59.8%);
+  /* Sidebar (dark navy) */
+  --color-sidebar-background: #2D3E50;
+  --color-sidebar-foreground: hsl(210 20% 80%);
+  --color-sidebar-primary: #3DBFA0;
+  --color-sidebar-primary-foreground: #FFFFFF;
+  --color-sidebar-accent: hsla(0, 0%, 100%, 0.08);
+  --color-sidebar-accent-foreground: #FFFFFF;
+  --color-sidebar-border: hsla(0, 0%, 100%, 0.1);
+  --color-sidebar-ring: #3DBFA0;
 
   /* Radii */
   --radius-sm: 0.25rem;

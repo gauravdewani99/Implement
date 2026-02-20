@@ -18,7 +18,7 @@ export function AppLayout({ children, sidebar }: { children: ReactNode; sidebar?
               />
             )}
             <aside
-              className={`fixed inset-y-0 left-0 z-50 w-72 border-r border-border bg-sidebar-background overflow-y-auto transform transition-transform duration-200 ease-out md:relative md:translate-x-0 md:shrink-0 md:z-auto ${
+              className={`fixed inset-y-0 left-0 z-50 w-72 border-r border-sidebar-border bg-sidebar-background overflow-y-auto transform transition-transform duration-200 ease-out md:relative md:translate-x-0 md:shrink-0 md:z-auto ${
                 sidebarOpen ? "translate-x-0" : "-translate-x-full"
               }`}
             >
